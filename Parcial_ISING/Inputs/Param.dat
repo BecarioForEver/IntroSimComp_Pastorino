@@ -1,0 +1,12 @@
+100
+1
+50000
+1000
+
+!!!!
+!! N
+!! J
+!! Int_1: Cuantos valores de E y M tendremos al final 
+!! Int_2: cada Int_2 pasos MC se calcula E y M
+!! El numero total de pasos MC es Int_1*Int_2
+
