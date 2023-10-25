@@ -1,0 +1,209 @@
+---
+title: "Parcial 1 - Modelo ISING"
+author: "Paul Gomez"
+date: "2023-10-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+```
+
+## PARCIAL 1 - MONTE CARLO: Modelo de ISING
+
+Modelo de Ising ... blah blah blah
+
+### Parametros de la simulacion
+
+-   N = 20. (40, 60 y 100 para comparar)
+-   kb = 1
+-   J = 1.
+-   Temperaturas ensayadas: 1 ... 5
+
+**Nota:** El codigo fortran de la simulacion esta en: [insertar link github]{.underline}
+
+```{r libs}
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(magrittr)
+library(tibble)
+```
+
+```{r data}
+E <- read.delim("./Fortran/Corrida 1-4/Outputs/output_E.dat", header = F) %>% as.matrix()
+M <- read.delim("./Fortran/Corrida 1-4/Outputs/output_M.dat", header = F) %>% as.matrix()
+```
+
+```{r params}
+temps <- read.delim("./Fortran/Corrida 1-4/Inputs/Temp.dat", sep = " ", header = F, skip = 1) %>% as.numeric()
+
+int_1 <- 1500
+int_2 <- 1000
+kb <- 1
+N <- 20*20
+```
+
+```{r funs}
+df_FUN <- function(v_values, v_names){
+  # Funcion para para crear df de los resultados fortran
+  matrix(v_values, nrow = int_1) %>% 
+    data.frame() %>% set_names(paste("T", v_names, sep = "")) %>% rowid_to_column() %>% mutate(MC_steps = rowid*int_2) %>% dplyr::select(!rowid)
+}
+
+FUN_data_stats <- function(x){
+  c( "Stand dev" = sd(x), 
+     "Mean"= mean(x,na.rm=TRUE),
+     "n" = length(x),
+     "Median" = median(x),
+     "CoeffofVariation" = sd(x)/mean(x,na.rm=TRUE),
+     "S_square" = var(x))
+     
+}
+```
+
+### Resultados
+
+```{r}
+df_E <- df_FUN(E, temps)
+df_M <- df_FUN(M, temps)
+```
+
+```{r stats}
+E_stats <- df_E[300:1500,] %>% select(!MC_steps) %>% sapply(FUN_data_stats) %>% t() %>% data.frame() %>% mutate(TEMP = temps)
+M_stats <- df_M[300:1500,] %>% select(!MC_steps) %>% sapply(FUN_data_stats) %>% t() %>% data.frame() %>% mutate(TEMP = temps)
+
+Cv <- E_stats %>% 
+  reframe(Cv = ((1/TEMP)**2)*S_square/N, TEMP = TEMP)
+
+Xm <- M_stats %>% 
+  reframe(X = ((1/TEMP)**2)*S_square, TEMP = TEMP) 
+
+df <- data.frame(Temp = temps,
+                  E = E_stats$Mean / (N/2),
+                  M = M_stats$Mean / N,
+                  Cv = Cv$Cv,
+                  Xm = Xm$X)
+```
+
+#### 1. Presentar graficos de las siguientes cantidades como función de la temperatura:
+
+**A) M vs T (B=0)**
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = M)) + geom_point() + geom_line()
+```
+
+**B) E vs T**
+
+```{r E_vs_Temp}
+df %>% ggplot(aes(x = Temp, y = E)) + geom_point() 
+```
+
+**C) Fracción de pasos aceptados respecto de pasos totales de MC**
+
+*Agregar este conteo al codigo*
+
+#### 2. Hstogramas de E y M para las configuraciones obtenidas con la simulación de Monte Carlo para distintas temperaturas.
+
+**Histogramas de E para T = 0.1K, 0.5K, 1.0K**
+
+```{r}
+df_E %>% pivot_longer(c(T0.1, T0.5, T1), 
+                      names_to = "Temp", values_to = "E") %>% 
+  ggplot( aes(x=E/(N/2), color=Temp, fill=Temp)) + 
+    geom_histogram() +
+    facet_wrap(~Temp)
+```
+
+**Histogramas de E para T = 1.5K - 4.0K**
+
+```{r}
+df_E %>% pivot_longer(c(T1.5, T2.05, T2.05, T2.5, T3, T3.5, T4), 
+                      names_to = "Temp", values_to = "E") %>% 
+  ggplot( aes(x=E/(N/2), color=Temp, fill=Temp)) +
+    geom_histogram() +
+    facet_wrap(~Temp)
+```
+
+**Histogramas de M para T = 0.1K, 0.5K, 1.0K, 1.5K**
+
+```{r}
+df_M %>% pivot_longer(c(T0.1, T0.5, T1, T1.5), names_to = "Temp", values_to = "M") %>% 
+  ggplot( aes(x=M/N, color=Temp, fill=Temp)) + 
+    geom_histogram() +
+    facet_wrap(~Temp)
+```
+
+**Histogramas de M para T = 2.0K - 4.0K**
+
+```{r}
+df_M %>% pivot_longer(c(T2.05, T2.25, T2.05, T2.5, T3, T3.5, T4), 
+                      names_to = "Temp", values_to = "M") %>% 
+  ggplot( aes(x=M/N, color=Temp, fill=Temp)) + 
+    geom_histogram() +
+    facet_wrap(~Temp)
+```
+
+**A) Analizar el comportamiento de sus fluctuaciones...**
+
+\# \# Aca va comentario \# \#
+
+**B) calor específico por partícula**
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = Cv)) + geom_point() + geom_line()
+```
+
+**C) Susceptibilidad magnética a campo nulo**
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = Xm)) + geom_line() +geom_point() +geom_vline(xintercept = 2.269, linetype = "dashed")
+```
+
+```{r}
+#write_csv(df, file = "./Outputs/DF.csv")
+```
+
+#### 3. Efectos de tamaño Finito
+
+-- graficos superpuestos de tc --
+
+```{r, message=FALSE}
+df_20 <- read_csv("./Fortran/Corrida N20/Outputs/DF.csv") %>% mutate(Xm = Xm/(20**2))
+df_40 <- read_csv("./Fortran/Corrida N40/Outputs/DF.csv") %>% mutate(Xm = Xm/(40**2))
+df_60 <- read_csv("./Fortran/Corrida N60/Outputs/DF.csv") %>% mutate(Xm = Xm/(60**2))
+df_100 <- read_csv("./Fortran/Corrida N100/Outputs/DF.csv") %>% mutate(Xm = Xm/(100**2))
+
+df <- rbind(df_20, df_40, df_60, df_100) %>% mutate(ID = c(rep("N_20",21),rep("N_40",21), rep("N_60",21), rep("N_100",21)))
+```
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = E, color = ID)) + geom_line() + geom_vline(xintercept = 2.269, linetype = "dashed")
+```
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = abs(M), color = ID)) + geom_line() + 
+  geom_vline(xintercept = 2.269, linetype = "dashed") + ylab("M")
+```
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = Cv, color = ID)) + geom_line() + geom_vline(xintercept = 2.269, linetype = "dashed")
+```
+
+```{r}
+df %>% ggplot(aes(x = Temp, y = Xm, color = ID)) + geom_line() + geom_vline(xintercept = 2.269, linetype = "dashed")
+```
+
+...No se que decir de los efectos de tamaño finito: Los resultados son similares pero es necesario agregar mas pasos MC...
+
+#### 4. Temperatura Critica
+
+Usando el Cv, la Tc es similar a la teorica... ??
+
+#### 5. Exponente critico
+
+... Deberia hablar con Claudio sobre la parte conceptual del modelo ...
