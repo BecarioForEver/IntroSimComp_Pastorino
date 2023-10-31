@@ -1,4 +1,5 @@
 # IntroSimComp_Pastorino
+
 ## Parcial 1
 Modelo de ISING:
 - Codigo en Fortran:
@@ -10,6 +11,4 @@ Modelo de ISING:
   - Los datos se analizaron en R/Markdown. Por ahora solo subo el html.
 
 ## Parcial 2
-Dinamica molecular:
--    
--  
+  
